@@ -60,6 +60,8 @@ int Analyzer::analyze()
 
   /* mark status as done */
   status_done = true;
+  emit analysisFinished();
+  emit analysisCompleted();
   return 0;
 }
 

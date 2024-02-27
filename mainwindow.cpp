@@ -14,6 +14,10 @@
 #include <iostream>
 #include <stdlib.h>
 
+QString directoryPath;
+int currentIndex=0;
+QFileInfoList fileInfoList;
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -42,24 +46,6 @@ void MainWindow::CreateAlert(const QString &text)
     QMessageBox::information(this, "Alert", text);
 }
 
-void MainWindow::RetrieveDirectories(const QString &text)
-{
-    QDir dir(text);
-
-    if (!dir.exists()) {
-        qDebug() << "Directory does not exist: " << text;
-        return;
-    }
-
-    QFileInfoList fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-
-    foreach (const QFileInfo& fileInfo, fileInfoList) {
-        QString directoryPath = fileInfo.absoluteFilePath();
-        allDirectories.append(directoryPath); // Store directory path in the list
-        RetrieveDirectories(directoryPath); // Recursively call to traverse subdirectories
-    }
-}
-
 
 void MainWindow::on_pushButtonSaveFeedback_clicked()
 {
@@ -82,7 +68,7 @@ void MainWindow::on_pushButtonSaveFeedback_clicked()
     }
 }
 
-void MainWindow::on_pushButtonAnalyze_clicked(const QString& directoryPath)
+void MainWindow::on_pushButtonAnalyze_clicked()
 {
     /* if analyzer is still running, wait for it to finish */
     if (m_analyzer && !m_analyzer->status_done) {
@@ -105,79 +91,103 @@ void MainWindow::on_pushButtonAnalyze_clicked(const QString& directoryPath)
     QObject::connect(m_analyzer, &Analyzer::updateProgressBar, this, &MainWindow::setProgressBar);
     QObject::connect(m_analyzer, &Analyzer::alertToWindow, this, &MainWindow::CreateAlert);
 
+    QObject::connect(m_analyzer, &Analyzer::analysisFinished, this, &MainWindow::onAnalysisFinished);
+    QObject::connect(m_analyzer, &Analyzer::analysisCompleted, this, &MainWindow::handleAnalysisCompleted);
+
     QtConcurrent::run(this->m_analyzer, &Analyzer::analyze);
-    while( !m_analyzer->status_done )
-    {
-        QThread::sleep(1);
-    }
+}
+void MainWindow::onAnalysisFinished()
+{
     AutoExport(directoryPath);
+
 }
 
-/*new -------------------- */
+// void MainWindow::on_pushButtonStudentFolder_clicked()
+// {
+//     QString text = QFileDialog::getExistingDirectory(this, "Open Student Folder", QDir::homePath(), QFileDialog::ShowDirsOnly
+//                                                                                                        | QFileDialog::DontResolveSymlinks);
+//     if (text != "")
+//     {
+//         ui->lineEditStudentFolder->setText(text);
+//         //allDirectories.clear();
+//         //RetrieveDirectories(dir);
+//         QDir dir(text);
+//         QFileInfoList fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
 
-//void MainWindow::on_pushButtonOpenDirectory_clicked()
-//{
-//    QString dirPath = QFileDialog::getExistingDirectory(this, "Open Folder", QDir::homePath(), QFileDialog::ShowDirsOnly
-//                                                    | QFileDialog::DontResolveSymlinks);
-//    QDir dir(dirPath);
-
-//    QList <QFileInfo> fileList= dir.entryInfoList();
-
-//    if(ui->listWidget->count() != 0)
-//    {
-//        ui->listWidget->clear();
-//    }
-
-//    for (int i=0; i< fileList.size(); i++)
-//    {
-//        ui->listWidget->addItem(fileList.at(i).fileName());
-//    }
-//     connect(ui->listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(doSomething(QListWidgetItem*)));
-//}
-
-/*new -------------------- */
-
-
-
-
+//      foreach (const QFileInfo& fileInfo, fileInfoList)
+//         {
+//            // QString directoryPath = fileInfo.absoluteFilePath();
+//             directoryPath = fileInfo.absoluteFilePath();
+//             string base = directoryPath.toStdString();
+//             param.studentModel = base + "/model.off";
+//             param.studentCenterPoint = base + "/center_point.pp";
+//             param.studentMidpoint =  base + "/mid_point.pp";
+//             param.studentMarginPoints =  base + "/margin_points.pp";
+//             param.studentAxialPoints = base + "/axial_points.pp";
+//             param.studentOcclusalPoints = base + "/occlusal_points.pp";
+//             param.studentGingivaPoints = base + "/gingiva_points.pp";
+//             param.originalModel = base + "/original_model.off";
+//             ui->lineEditStudentModel->setText(QString::fromStdString(param.studentModel));
+//             ui->lineEditStudentCenter->setText(QString::fromStdString(param.studentCenterPoint));
+//             ui->lineEditStudentMidpoint->setText(QString::fromStdString(param.studentMidpoint));
+//             ui->lineEditStudentMarginPoints->setText(QString::fromStdString(param.studentMarginPoints));
+//             ui->lineEditStudentAxialPoints->setText(QString::fromStdString(param.studentAxialPoints));
+//             ui->lineEditStudentOcclusalPoints->setText(QString::fromStdString(param.studentOcclusalPoints));
+//             ui->lineEditStudentGingivaPoints->setText(QString::fromStdString(param.studentGingivaPoints));
+//             ui->lineEditOriginalModel->setText(QString::fromStdString(param.originalModel));
+//             on_pushButtonAnalyze_clicked();
+//         }
+//     }
+// }
 
 void MainWindow::on_pushButtonStudentFolder_clicked()
 {
     QString text = QFileDialog::getExistingDirectory(this, "Open Student Folder", QDir::homePath(), QFileDialog::ShowDirsOnly
-                                                                                                       | QFileDialog::DontResolveSymlinks);
+                                                                                                        | QFileDialog::DontResolveSymlinks);
     if (text != "")
     {
         ui->lineEditStudentFolder->setText(text);
-        allDirectories.clear();
-        //RetrieveDirectories(dir);
         QDir dir(text);
-        QFileInfoList fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
-
-        foreach (const QFileInfo& fileInfo, fileInfoList)
-        {
-            QString directoryPath = fileInfo.absoluteFilePath();
-            string base = directoryPath.toStdString();
-            param.studentModel = base + "/model.off";
-            param.studentCenterPoint = base + "/center_point.pp";
-            param.studentMidpoint =  base + "/mid_point.pp";
-            param.studentMarginPoints =  base + "/margin_points.pp";
-            param.studentAxialPoints = base + "/axial_points.pp";
-            param.studentOcclusalPoints = base + "/occlusal_points.pp";
-            param.studentGingivaPoints = base + "/gingiva_points.pp";
-            param.originalModel = base + "/original_model.off";
-            ui->lineEditStudentModel->setText(QString::fromStdString(param.studentModel));
-            ui->lineEditStudentCenter->setText(QString::fromStdString(param.studentCenterPoint));
-            ui->lineEditStudentMidpoint->setText(QString::fromStdString(param.studentMidpoint));
-            ui->lineEditStudentMarginPoints->setText(QString::fromStdString(param.studentMarginPoints));
-            ui->lineEditStudentAxialPoints->setText(QString::fromStdString(param.studentAxialPoints));
-            ui->lineEditStudentOcclusalPoints->setText(QString::fromStdString(param.studentOcclusalPoints));
-            ui->lineEditStudentGingivaPoints->setText(QString::fromStdString(param.studentGingivaPoints));
-            ui->lineEditOriginalModel->setText(QString::fromStdString(param.originalModel));
-            on_pushButtonAnalyze_clicked(directoryPath);
-        }
+        fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+        startLoop();
     }
 }
 
+void MainWindow::startLoop()
+{
+    qDebug() << "File Info List Size: " << fileInfoList.size();
+    qDebug() << "Current Index: " << currentIndex;
+
+    if (currentIndex < fileInfoList.size()) {
+        const QFileInfo& fileInfo = fileInfoList[currentIndex];
+        directoryPath = fileInfo.absoluteFilePath();
+        string base = directoryPath.toStdString();
+        param.studentModel = base + "/model.off";
+        param.studentCenterPoint = base + "/center_point.pp";
+        param.studentMidpoint =  base + "/mid_point.pp";
+        param.studentMarginPoints =  base + "/margin_points.pp";
+        param.studentAxialPoints = base + "/axial_points.pp";
+        param.studentOcclusalPoints = base + "/occlusal_points.pp";
+        param.studentGingivaPoints = base + "/gingiva_points.pp";
+        param.originalModel = base + "/original_model.off";
+        ui->lineEditStudentModel->setText(QString::fromStdString(param.studentModel));
+        ui->lineEditStudentCenter->setText(QString::fromStdString(param.studentCenterPoint));
+        ui->lineEditStudentMidpoint->setText(QString::fromStdString(param.studentMidpoint));
+        ui->lineEditStudentMarginPoints->setText(QString::fromStdString(param.studentMarginPoints));
+        ui->lineEditStudentAxialPoints->setText(QString::fromStdString(param.studentAxialPoints));
+        ui->lineEditStudentOcclusalPoints->setText(QString::fromStdString(param.studentOcclusalPoints));
+        ui->lineEditStudentGingivaPoints->setText(QString::fromStdString(param.studentGingivaPoints));
+        ui->lineEditOriginalModel->setText(QString::fromStdString(param.originalModel));
+        on_pushButtonAnalyze_clicked();
+    }
+}
+
+void MainWindow::handleAnalysisCompleted() {
+    ++currentIndex;
+    qDebug() << "Analysis Completed. Moving to next index: " << currentIndex;
+    // Start the next iteration
+    startLoop();
+}
 void MainWindow::on_pushButtonStudentModel_clicked()
 {
     QString filename = QFileDialog::getOpenFileName(this, "Open Student Model", QDir::homePath());
@@ -490,6 +500,6 @@ void MainWindow::AutoExport(const QString& fileName)
     file.flush();
     file.close();
 
-    // //QMessageBox::information(this, tr("Success"),
-    //                          tr("Result Exported to ").append(fileName));
+     // QMessageBox::information(this, tr("Success"),
+     //                          tr("Result Exported to ").append(finalPath));
 }

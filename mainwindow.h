@@ -18,7 +18,6 @@ public:
     ~MainWindow();
     QList<QString> allDirectories;
 
-
 private slots:
     void updateConsole(const QString& text);
 
@@ -26,11 +25,14 @@ private slots:
 
     void CreateAlert(const QString& text);
 
-    void RetrieveDirectories(const QString& text);
+    void onAnalysisFinished();
+    void handleAnalysisCompleted();
+    void startLoop();
+
 
     void on_pushButtonSaveFeedback_clicked();
 
-    void on_pushButtonAnalyze_clicked(const QString& text);
+    void on_pushButtonAnalyze_clicked();
 
     void on_pushButtonStudentModel_clicked();
 
