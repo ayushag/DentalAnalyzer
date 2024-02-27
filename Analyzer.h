@@ -33,6 +33,9 @@ signals:
 
     void alertToWindow(QString msg);
 
+    void analysisFinished();
+    void analysisCompleted();
+
 private:
     // initialize private variables
     bool init();

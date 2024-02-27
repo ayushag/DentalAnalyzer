@@ -16,6 +16,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    QList<QString> allDirectories;
 
 private slots:
     void updateConsole(const QString& text);
@@ -23,6 +24,11 @@ private slots:
     void setProgressBar(int val);
 
     void CreateAlert(const QString& text);
+
+    void onAnalysisFinished();
+    void handleAnalysisCompleted();
+    void startLoop();
+
 
     void on_pushButtonSaveFeedback_clicked();
 
@@ -51,7 +57,8 @@ private slots:
     // export results as csv
     void on_pushButtonExport_clicked();
 
-    // void on_pushButtonOpenDirectory_clicked();  // new added
+    // auto export results as csv
+    void AutoExport(const QString& text);
 
 private:
     Ui::MainWindow *ui;

@@ -14,6 +14,10 @@
 #include <iostream>
 #include <stdlib.h>
 
+QString directoryPath;
+int currentIndex=0;
+QFileInfoList fileInfoList;
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -41,6 +45,7 @@ void MainWindow::CreateAlert(const QString &text)
 {
     QMessageBox::information(this, "Alert", text);
 }
+
 
 void MainWindow::on_pushButtonSaveFeedback_clicked()
 {
@@ -86,44 +91,77 @@ void MainWindow::on_pushButtonAnalyze_clicked()
     QObject::connect(m_analyzer, &Analyzer::updateProgressBar, this, &MainWindow::setProgressBar);
     QObject::connect(m_analyzer, &Analyzer::alertToWindow, this, &MainWindow::CreateAlert);
 
+    QObject::connect(m_analyzer, &Analyzer::analysisFinished, this, &MainWindow::onAnalysisFinished);
+    QObject::connect(m_analyzer, &Analyzer::analysisCompleted, this, &MainWindow::handleAnalysisCompleted);
+
     QtConcurrent::run(this->m_analyzer, &Analyzer::analyze);
 }
+void MainWindow::onAnalysisFinished()
+{
+    AutoExport(directoryPath);
 
-/*new -------------------- */
+}
 
-//void MainWindow::on_pushButtonOpenDirectory_clicked()
-//{
-//    QString dirPath = QFileDialog::getExistingDirectory(this, "Open Folder", QDir::homePath(), QFileDialog::ShowDirsOnly
-//                                                    | QFileDialog::DontResolveSymlinks);
-//    QDir dir(dirPath);
+// void MainWindow::on_pushButtonStudentFolder_clicked()
+// {
+//     QString text = QFileDialog::getExistingDirectory(this, "Open Student Folder", QDir::homePath(), QFileDialog::ShowDirsOnly
+//                                                                                                        | QFileDialog::DontResolveSymlinks);
+//     if (text != "")
+//     {
+//         ui->lineEditStudentFolder->setText(text);
+//         //allDirectories.clear();
+//         //RetrieveDirectories(dir);
+//         QDir dir(text);
+//         QFileInfoList fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
 
-//    QList <QFileInfo> fileList= dir.entryInfoList();
-
-//    if(ui->listWidget->count() != 0)
-//    {
-//        ui->listWidget->clear();
-//    }
-
-//    for (int i=0; i< fileList.size(); i++)
-//    {
-//        ui->listWidget->addItem(fileList.at(i).fileName());
-//    }
-//     connect(ui->listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(doSomething(QListWidgetItem*)));
-//}
-
-/*new -------------------- */
-
-
-
-
+//      foreach (const QFileInfo& fileInfo, fileInfoList)
+//         {
+//            // QString directoryPath = fileInfo.absoluteFilePath();
+//             directoryPath = fileInfo.absoluteFilePath();
+//             string base = directoryPath.toStdString();
+//             param.studentModel = base + "/model.off";
+//             param.studentCenterPoint = base + "/center_point.pp";
+//             param.studentMidpoint =  base + "/mid_point.pp";
+//             param.studentMarginPoints =  base + "/margin_points.pp";
+//             param.studentAxialPoints = base + "/axial_points.pp";
+//             param.studentOcclusalPoints = base + "/occlusal_points.pp";
+//             param.studentGingivaPoints = base + "/gingiva_points.pp";
+//             param.originalModel = base + "/original_model.off";
+//             ui->lineEditStudentModel->setText(QString::fromStdString(param.studentModel));
+//             ui->lineEditStudentCenter->setText(QString::fromStdString(param.studentCenterPoint));
+//             ui->lineEditStudentMidpoint->setText(QString::fromStdString(param.studentMidpoint));
+//             ui->lineEditStudentMarginPoints->setText(QString::fromStdString(param.studentMarginPoints));
+//             ui->lineEditStudentAxialPoints->setText(QString::fromStdString(param.studentAxialPoints));
+//             ui->lineEditStudentOcclusalPoints->setText(QString::fromStdString(param.studentOcclusalPoints));
+//             ui->lineEditStudentGingivaPoints->setText(QString::fromStdString(param.studentGingivaPoints));
+//             ui->lineEditOriginalModel->setText(QString::fromStdString(param.originalModel));
+//             on_pushButtonAnalyze_clicked();
+//         }
+//     }
+// }
 
 void MainWindow::on_pushButtonStudentFolder_clicked()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, "Open Student Folder", QDir::homePath(), QFileDialog::ShowDirsOnly
-                                                                                                       | QFileDialog::DontResolveSymlinks);
-    if (dir != "") {
-        ui->lineEditStudentFolder->setText(dir);
-        string base = dir.toStdString();
+    QString text = QFileDialog::getExistingDirectory(this, "Open Student Folder", QDir::homePath(), QFileDialog::ShowDirsOnly
+                                                                                                        | QFileDialog::DontResolveSymlinks);
+    if (text != "")
+    {
+        ui->lineEditStudentFolder->setText(text);
+        QDir dir(text);
+        fileInfoList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+        startLoop();
+    }
+}
+
+void MainWindow::startLoop()
+{
+    qDebug() << "File Info List Size: " << fileInfoList.size();
+    qDebug() << "Current Index: " << currentIndex;
+
+    if (currentIndex < fileInfoList.size()) {
+        const QFileInfo& fileInfo = fileInfoList[currentIndex];
+        directoryPath = fileInfo.absoluteFilePath();
+        string base = directoryPath.toStdString();
         param.studentModel = base + "/model.off";
         param.studentCenterPoint = base + "/center_point.pp";
         param.studentMidpoint =  base + "/mid_point.pp";
@@ -140,9 +178,16 @@ void MainWindow::on_pushButtonStudentFolder_clicked()
         ui->lineEditStudentOcclusalPoints->setText(QString::fromStdString(param.studentOcclusalPoints));
         ui->lineEditStudentGingivaPoints->setText(QString::fromStdString(param.studentGingivaPoints));
         ui->lineEditOriginalModel->setText(QString::fromStdString(param.originalModel));
+        on_pushButtonAnalyze_clicked();
     }
 }
 
+void MainWindow::handleAnalysisCompleted() {
+    ++currentIndex;
+    qDebug() << "Analysis Completed. Moving to next index: " << currentIndex;
+    // Start the next iteration
+    startLoop();
+}
 void MainWindow::on_pushButtonStudentModel_clicked()
 {
     QString filename = QFileDialog::getOpenFileName(this, "Open Student Model", QDir::homePath());
@@ -348,3 +393,113 @@ void MainWindow::on_pushButtonExport_clicked()
                              tr("Result Exported to ").append(fileName));
 }
 
+void MainWindow::AutoExport(const QString& fileName)
+{
+    if (!m_analyzer || !m_analyzer->status_done) {
+        QMessageBox::information(this, tr("Export Error"),
+                                 tr("Results not available"));
+        return;
+    }
+
+    QString finalPath = fileName + "/export.csv";
+
+    QFile file(finalPath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        QMessageBox::information(this, tr("Unable to open file"),
+                                 file.errorString());
+        return;
+    }
+    QTextStream out(&file);
+
+    /* student name */
+    out << "Name: " << ui->lineEditStudentName->text() << ",";
+
+    /* stats headers */
+    out << "Max," << "Min," << "Avg," << "\n";
+
+    /* metrics */
+    if (m_analyzer->param.divisionEnabled) {
+        QString region_map[4] = {"Lingual", "Buccal", "Mesial", "Distal"};
+        for (int i = 0; i < 4; i++) {
+            out << "Shoulder Width (" << region_map[i] << "),";
+            out << m_analyzer->student_result.shoulder_width_stats[i].to_csv();
+        }
+        for (int i = 0; i < 4; i++) {
+            out << "Taper (" << region_map[i] << "),";
+            out << m_analyzer->student_result.taper_stats[i].to_csv();
+        }
+        for (int i = 0; i < 4; i++) {
+            out << "Axial Wall Height (" << region_map[i] << "),";
+            out << m_analyzer->student_result.axial_wall_height_stats[i].to_csv();
+        }
+        //    for (int i = 0; i < 4; i++) {
+        //      out << "Margin Depth (" << region_map[i] << "),";
+        //      out << m_analyzer->student_result.margin_depth_stats[i].to_csv();
+        //    }
+        for (int i = 0; i < 4; i++) {
+            out << "Occlusal Reduction (" << region_map[i] << "),";
+            out << m_analyzer->student_result.occlusal_reduction_stats[i].to_csv();
+        }
+        for (int i = 0; i < 4; i++) {
+            out << "Gingival Extension (" << region_map[i] << "),";
+            out << m_analyzer->student_result.gingival_extension_stats[i].to_csv();
+        }
+    } else {
+        out << "Shoulder Width,";
+        out << m_analyzer->student_result.shoulder_width_stats[0].to_csv();
+        out << "Taper,";
+        out << m_analyzer->student_result.taper_stats[0].to_csv();
+        out << "Axial Wall Height,";
+        out << m_analyzer->student_result.axial_wall_height_stats[0].to_csv();
+        out << "Margin Depth,";
+        // out << m_analyzer->student_result.margin_depth_stats[0].to_csv();
+        out << "Occlusal Reduction,";
+        out << m_analyzer->student_result.occlusal_reduction_stats[0].to_csv();
+        out << "Gingival Extension,";
+        out << m_analyzer->student_result.gingival_extension_stats[0].to_csv();
+    }
+
+    /* data points */
+    out << "\n";
+    out << "Metric: Shoulder Width\n";
+    out << "Point,";
+    out << points_to_csv(m_analyzer->student_result.shoulder_width_data);
+    out << "Value,";
+    out << values_to_csv(m_analyzer->student_result.shoulder_width_data);
+
+    out << "Metric: Taper\n";
+    out << "Point,";
+    out << points_to_csv(m_analyzer->student_result.taper_data);
+    out << "Value,";
+    out << values_to_csv(m_analyzer->student_result.taper_data);
+
+    out << "Metric: Axial Wall Height\n";
+    out << "Point,";
+    out << points_to_csv(m_analyzer->student_result.axial_wall_height_data);
+    out << "Value,";
+    out << values_to_csv(m_analyzer->student_result.axial_wall_height_data);
+
+    //  out << "Metric: Margin Depth\n";
+    //  out << "Point,";
+    //  out << points_to_csv(m_analyzer->student_result.margin_depth_data);
+    //  out << "Value,";
+    //  out << values_to_csv(m_analyzer->student_result.margin_depth_data);
+
+    out << "Metric: Occlusal Reduction\n";
+    out << "Point,";
+    out << points_to_csv(m_analyzer->student_result.occlusal_reduction_data);
+    out << "Value,";
+    out << values_to_csv(m_analyzer->student_result.occlusal_reduction_data);
+
+    out << "Metric: Gingival Extension\n";
+    out << "Point,";
+    out << points_to_csv(m_analyzer->student_result.gingival_extension_data);
+    out << "Value,";
+    out << values_to_csv(m_analyzer->student_result.gingival_extension_data);
+
+    file.flush();
+    file.close();
+
+     // QMessageBox::information(this, tr("Success"),
+     //                          tr("Result Exported to ").append(finalPath));
+}
