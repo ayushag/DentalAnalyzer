@@ -17,6 +17,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     QList<QString> allDirectories;
+    bool firstClick = false;
 
 private slots:
     void updateConsole(const QString& text);
